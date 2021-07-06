@@ -1,0 +1,6 @@
+lxml
+numpy
+opencv-python
+opencv-contrib-python
+tqdm
+tensorflow
