@@ -1012,11 +1012,11 @@ def set_colorization(state, _ = None):
         return
 
     if state:
-        ALLOCATOR = ResourceAllocator(100, 1800, colorization.get_colorized_images, free_image_block)
+        ALLOCATOR = ResourceAllocator(30, 1000, colorization.get_colorized_images, free_image_block)
         ALLOCATOR.append(IMAGE_PATH_LIST)
         gc.collect()
     else:
-        ALLOCATOR = ResourceAllocator(300, 1800, load_image_block, free_image_block)
+        ALLOCATOR = ResourceAllocator(300, 1000, load_image_block, free_image_block)
         ALLOCATOR.append(IMAGE_PATH_LIST)
         gc.collect()
 
