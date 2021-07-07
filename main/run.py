@@ -746,8 +746,6 @@ def convert_video_to_images(video_path, n_frames, desired_img_format):
                 cv2.imwrite(frame_path, frame)
         # release the video capture object
         cap.release()
-    return file_path, video_name_ext
-
 
 def nonblank_lines(f):
     for l in f:
@@ -992,14 +990,24 @@ def complement_bgr(color):
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 
+def set_num_track_frames(n):
+    global N_FRAMES
+    N_FRAMES = n
+
+
 if __name__ == '__main__':    
     print("load all images and videos (with multiple extensions) from a directory using OpenCV")
     IMAGE_PATH_LIST = []
     VIDEO_NAME_DICT = {}
 
+    def make_contrast(image):
+        BRIGHTNESS, CONTRAST = 32, 32
+        return image_load.apply_brightness_contrast(image, BRIGHTNESS, CONTRAST)
+
     def load_image_block(paths):
         #print("loading image block")
         result = image_load.process_parallel(paths, cv2.imread)
+        #result = image_load.process_parallel(result, make_contrast)
         return result
     
     def free_image_block(block):
@@ -1081,10 +1089,6 @@ if __name__ == '__main__':
         cv2.createTrackbar(TRACKBAR_CLASS, WINDOW_NAME, 0, last_class_index, set_class_index)
 
     # select track frames count
-
-    def set_num_track_frames(n):
-        N_FRAMES = n
-
     cv2.createTrackbar("num frames", WINDOW_NAME, 0, 255, set_num_track_frames)
 
     print("initialize")
