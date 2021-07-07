@@ -2,6 +2,7 @@
 import argparse
 import glob
 import json
+import threading
 import os
 import gc
 import re
@@ -9,6 +10,7 @@ from random import choice
 
 from ResourceAllocator import ResourceAllocator
 import image_load
+import colorization
 
 import cv2
 import numpy as np
@@ -994,27 +996,41 @@ def set_num_track_frames(n):
     global N_FRAMES
     N_FRAMES = n
 
+def load_image_block(paths):
+    return image_load.process_parallel(paths, cv2.imread)
+    
+def free_image_block(block):
+    gc.collect()
+
+
+def set_colorization(state, _ = None):
+    print("Colorization state:", state)
+    global COLORIZATION_STATE
+    global ALLOCATOR
+
+    if COLORIZATION_STATE == state and ALLOCATOR is not None:
+        return
+
+    if state:
+        ALLOCATOR = ResourceAllocator(100, 1800, colorization.get_colorized_images, free_image_block)
+        ALLOCATOR.append(IMAGE_PATH_LIST)
+        gc.collect()
+    else:
+        ALLOCATOR = ResourceAllocator(300, 1800, load_image_block, free_image_block)
+        ALLOCATOR.append(IMAGE_PATH_LIST)
+        gc.collect()
+
 
 if __name__ == '__main__':    
     print("load all images and videos (with multiple extensions) from a directory using OpenCV")
     IMAGE_PATH_LIST = []
     VIDEO_NAME_DICT = {}
+    ALLOCATOR = None
+    COLORIZATION_STATE = False
 
     def make_contrast(image):
         BRIGHTNESS, CONTRAST = 32, 32
         return image_load.apply_brightness_contrast(image, BRIGHTNESS, CONTRAST)
-
-    def load_image_block(paths):
-        #print("loading image block")
-        result = image_load.process_parallel(paths, cv2.imread)
-        #result = image_load.process_parallel(result, make_contrast)
-        return result
-    
-    def free_image_block(block):
-        gc.collect()
-
-    ALLOCATOR = ResourceAllocator(300, 1800, load_image_block, free_image_block)
-
     # индексируем все изображения
     for f in image_load.list_folder_files(INPUT_DIR, image_load.is_file_image):
         IMAGE_PATH_LIST.append(f)
@@ -1038,7 +1054,7 @@ if __name__ == '__main__':
         IMAGE_PATH_LIST.extend(path for path in video_images)
     
 
-    ALLOCATOR.append(IMAGE_PATH_LIST)
+    set_colorization(COLORIZATION_STATE)
 
     last_img_index = len(IMAGE_PATH_LIST) - 1
 
@@ -1079,6 +1095,9 @@ if __name__ == '__main__':
     cv2.createButton("prepare_yolo", prepare_yolo, None, cv2.QT_CHECKBOX, 1)
     cv2.resizeWindow(WINDOW_NAME, 1000, 700)
     cv2.setMouseCallback(WINDOW_NAME, mouse_listener)
+
+    # colors
+    cv2.createButton("colorization", set_colorization, None, cv2.QT_CHECKBOX, 0)
 
     # selected image
     print(last_img_index, set_img_index)
@@ -1142,6 +1161,8 @@ if __name__ == '__main__':
                 else:
                     edges_on = True
                     display_text('Edges turned ON!', 1000)
+            elif pressed_key == ord('t'):
+                set_colorization(not COLORIZATION_STATE)
             elif pressed_key == ord('p'):
                 # check if the image is a frame from a video
                 is_from_video, video_name = is_frame_from_video(img_path)
