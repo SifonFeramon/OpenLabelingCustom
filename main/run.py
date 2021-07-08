@@ -1010,13 +1010,15 @@ def set_colorization(state, _ = None):
 
     if COLORIZATION_STATE == state and ALLOCATOR is not None:
         return
+    
+    COLORIZATION_STATE = state
 
     if state:
-        ALLOCATOR = ResourceAllocator(30, 1000, colorization.get_colorized_images, free_image_block)
+        ALLOCATOR = ResourceAllocator(10, 3, 500, colorization.get_colorized_images, free_image_block)
         ALLOCATOR.append(IMAGE_PATH_LIST)
         gc.collect()
     else:
-        ALLOCATOR = ResourceAllocator(300, 1000, load_image_block, free_image_block)
+        ALLOCATOR = ResourceAllocator(30, 5, 1000, load_image_block, free_image_block)
         ALLOCATOR.append(IMAGE_PATH_LIST)
         gc.collect()
 
@@ -1162,7 +1164,10 @@ if __name__ == '__main__':
                     edges_on = True
                     display_text('Edges turned ON!', 1000)
             elif pressed_key == ord('t'):
-                set_colorization(not COLORIZATION_STATE)
+                if COLORIZATION_STATE:
+                    set_colorization(False)
+                else:
+                    set_colorization(True)
             elif pressed_key == ord('p'):
                 # check if the image is a frame from a video
                 is_from_video, video_name = is_frame_from_video(img_path)

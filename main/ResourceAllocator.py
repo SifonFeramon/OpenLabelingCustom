@@ -1,6 +1,7 @@
 import threading
 import concurrent.futures
 import multiprocessing as mp
+from typing import ValuesView
 
 def dummy_free(_):
     pass
@@ -11,7 +12,7 @@ def dummy_mem(res):
 # аллокатор подгружает ресурсы только при запросе к элементу с помощью переданной функции
 # автоматически освобождает давно неиспользуемые ресурсы при нехватке памяти
 class ResourceAllocator:
-    def __init__(self, elems_per_block, max_memory,
+    def __init__(self, elems_per_block, view_radius, max_memory,
         request_func, free_func = dummy_free, memory_func = dummy_mem):
 
         self.elems_per_block = elems_per_block
@@ -26,6 +27,7 @@ class ResourceAllocator:
         # индексы блоков, находящиеся рядом от последнего запрошенного 
         self.current = 0
         self.count = 0
+        self.view_radius = view_radius
         self.request_func = request_func
         self.free_func = free_func
         self.memory_func = memory_func
@@ -48,16 +50,21 @@ class ResourceAllocator:
             return None
 
         # добавляем в историю элементы с прошлой индексации
-        self.__history_block(self.current - 1)
+
+        for i in range(1, self.view_radius):
+            self.__history_block(self.current - i)
         self.__history_block(self.current)
-        self.__history_block(self.current + 1)
+        for i in range(1, self.view_radius):
+            self.__history_block(self.current + i)
 
         self.current = index // self.elems_per_block 
 
         # делаем блоки активными возле запрошенного индекса, подгружая кэш при необходимости
-        self.__renew_block(self.current - 1)
         self.__renew_block(self.current)
-        self.__renew_block(self.current + 1)
+        for i in range(1, self.view_radius):
+            self.__renew_block(self.current + i)
+        for i in range(1, self.view_radius):
+            self.__renew_block(self.current - i)
 
         # дожидаемся, пока ресурс будет загружен
         self.blocks[self.current][1].wait()
