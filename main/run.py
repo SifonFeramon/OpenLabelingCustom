@@ -222,8 +222,8 @@ def draw_prev_boxes(annotation_paths, coffset):
             for idx, line in enumerate(fp):
                 obj = line
                 class_name, class_index, xmin, ymin, xmax, ymax = get_txt_object_data(obj, width, height)
-                xmin = width - xmin
-                xmax = width - xmax
+                #xmin = width - xmin
+                #xmax = width - xmax
                 img_objects.append([class_index, xmin, ymin, xmax, ymax])
                 color = class_rgb[class_index].tolist()
                 save_bounding_box(annotation_paths, class_index, (xmin, ymin), (xmax, ymax), width, height)
@@ -1196,7 +1196,8 @@ if __name__ == '__main__':
                 if pressed_key == ord('z'):
                     coffset = -1
                 elif pressed_key == ord('x'):
-                    coffset = 0
+                    #coffset = 0
+                    pass
                 elif pressed_key == ord('c'):
                     coffset = 1
                 is_from_video, video_name = is_frame_from_video(img_path)
@@ -1209,9 +1210,9 @@ if __name__ == '__main__':
             elif pressed_key == 46:#delete
                 print('deleting objects on screen')
                 obj_to_edit=img_objects
-                for i in range(32):
-                    for obj in obj_to_edit:
-                        edit_bbox(obj, 'delete')
+                #for i in range(32):
+                for obj in obj_to_edit:
+                    edit_bbox(obj, 'delete')
             elif pressed_key == ord('n'):
                 print('dnn detection')
                 add_detected(annotation_paths)
