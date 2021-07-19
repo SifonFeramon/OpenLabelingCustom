@@ -11,6 +11,7 @@ from random import choice
 from ResourceAllocator import ResourceAllocator
 import image_load
 import colorization
+import utils as u
 
 import cv2
 import numpy as np
@@ -997,7 +998,7 @@ def set_num_track_frames(n):
     N_FRAMES = n
 
 def load_image_block(paths):
-    return image_load.process_parallel(paths, cv2.imread)
+    return u.process_parallel(paths, cv2.imread)
     
 def free_image_block(block):
     gc.collect()
@@ -1034,16 +1035,16 @@ if __name__ == '__main__':
         BRIGHTNESS, CONTRAST = 32, 32
         return image_load.apply_brightness_contrast(image, BRIGHTNESS, CONTRAST)
     # индексируем все изображения
-    for f in image_load.list_folder_files(INPUT_DIR, image_load.is_file_image):
+    for f in u.list_folder(INPUT_DIR, u.is_file_image, True):
         IMAGE_PATH_LIST.append(f)
 
     # кэшируем все добавленные видео
-    for f in image_load.list_folder_files(INPUT_DIR, image_load.is_file_video):
+    for f in u.list_folder(INPUT_DIR, u.is_file_video):
         image_load.get_video_images(f)
 
     # индексируем все видео из подпапок
-    for f in image_load.list_folder_files(INPUT_DIR, os.path.isdir):
-        video_images = image_load.list_folder_files(f, image_load.is_file_image)
+    for f in u.list_folder(INPUT_DIR, os.path.isdir):
+        video_images = u.list_folder(f, u.is_file_image, True)
         first_index = len(IMAGE_PATH_LIST)
         last_index = first_index + len(video_images) # exclusive 
 
