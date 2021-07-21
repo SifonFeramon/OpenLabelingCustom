@@ -2,6 +2,8 @@ from collections import defaultdict
 import utils as u
 import os
 import numpy as np
+import counting
+import matplotlib.pyplot as plt
 
 
 def side_coords(box):
@@ -125,7 +127,7 @@ def calc_metrics(predictions, ground_truths):
         # если класс предсказан неверно, то ложноотрицательный
         else:
             cls_stats[2] += 1
-
+    
     # [(class, precision, recall, IoU)]
     final = np.empty(shape=(len(stats), 4), dtype=float)
 
@@ -133,13 +135,21 @@ def calc_metrics(predictions, ground_truths):
     i = 0
     for cls, stat in stats.items():
         final[i][0] = cls
-        final[i][1] = stat[0] / (stat[0] + stat[1])
-        final[i][2] = stat[0] / (stat[0] + stat[2])
-        final[i][3] = stat[3] / stat[4]
+        final[i][1] = div_zero_zero_as_one(stat[0], (stat[0] + stat[1]))
+        final[i][2] = div_zero_zero_as_one(stat[0], (stat[0] + stat[2]))
+        final[i][3] = div_zero_zero_as_one(stat[3], stat[4])
         i += 1
+    
+
 
     return final
 
+# деление 0 на 0 считается равным 1
+def div_zero_zero_as_one(v1, v2):
+    if v1 == v2 == 0:
+        return 1
+    else:
+        return v1 / v2
 
 # out matrix: [[class, x center, y center, width, height]
 def read_config_matrix(path):
@@ -160,17 +170,8 @@ def calc_file_metrics(ground_dir, predict_dir, filename):
     predict = read_config_matrix(os.path.join(predict_dir, filename))
     return calc_metrics(predict, ground)
 
-# out [(precision, recall, IoU)]
-def filter_cls_metrics(metrics, cls):
-    cls_metrics = []
-    for file_metrics in metrics:
-        file_metrics = file_metrics[1]
-        for cls_metric in file_metrics:
-            if cls_metric[0] == cls:
-                cls_metrics.append(cls_metric[1:])
-                break
-    return np.array(cls_metrics)
 
+# input [(precision, recall, IoU)]
 # out [(precision, recall)] 
 def interpolated_precision(metrics):
     if len(metrics) == 0:
@@ -182,51 +183,121 @@ def interpolated_precision(metrics):
     # [(percision, recall)]
     results = [[metrics[0][0], metrics[0][1]]]
 
+    # Выделяются метрики, имеющие одинаковую полноту. Среди них находится максимальная точность.
     for metric in metrics[1:]:
         precision = metric[0]
         recall = metric[1]
 
         if results[-1][1] != recall:
-            results.append((results[-1][0], results[-1][1]))
+            results.append([results[-1][0], results[-1][1]])
             results[-1][1] = recall
-            results[-1][0] = -1
+            results[-1][0] = precision
         else:
             results[-1][0] = max(results[-1][0],  precision)
 
-    return results
+    return np.array(results)
+
 
 def find_precision_for_recall(interpolated, recall):
     for i in range(1, len(interpolated)):
         if interpolated[i][1] > recall:
             return interpolated[i - 1][0]
-    return interpolated[0][0]
+    return interpolated[-1][0]
 
 
-def calculate_AP(metrics):
+def calculate_AP(metrics, plot=None):
     interpolated = interpolated_precision(metrics)
+    interpolated = interpolated[interpolated[:, 1].argsort()]
+
     if(len(interpolated) == 0):
         return 1.0
 
-    recall_segments = np.arange(0.0, 1.1, 0.1)
-
+    recall_segments = np.arange(0.0, 1.1, 0.001)
+    precision_segments = []
     sum = 0.0
+
     for recall in recall_segments:
-        sum += find_precision_for_recall(interpolated, recall)
+        precision_segments.append(find_precision_for_recall(interpolated, recall))
+        sum += precision_segments[-1]
+
+    if plot is not None:    
+        plt.xlabel('полнота')
+        plt.ylabel('точность')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.1])
+        plt.plot(recall_segments, precision_segments, label=plot)
+
     return sum / len(recall_segments)
 
-def calculate_mAP(ground_dir, predict_dir, cls_list):
+
+# out [(precision, recall, IoU)]
+def filter_cls_metrics(metrics, cls):
+    cls_metrics = []
+    for file_metrics in metrics:
+        file_metrics = file_metrics[1]
+        for cls_metric in file_metrics:
+            if cls_metric[0] == cls:
+                cls_metrics.append(cls_metric[1:])
+                break
+    return np.array(cls_metrics)
+
+
+def average_metric(metrics, i):
+    total = 0
+    for iou in metrics[:, i]:
+        total += iou
+    return total / len(metrics)
+
+
+def calculate_mAP(ground_dir, predict_dir, cls_list, plot_labels=None):
     def load_f(file):
         return calc_file_metrics(ground_dir, predict_dir,  os.path.basename(file))
 
+    counts = counting.count_classes(ground_dir)
+    total_count = 0
+    for i, c in counts.items():
+        if i in cls_list:
+            total_count += c
+
     metrics = u.load_from_directory(predict_dir, load_f, u.is_file_txt)
-    sum = 0.0
+    sum_ap, sum_iou, sum_precision, sum_recall = 0.0, 0.0, 0.0, 0.0
+
     for cls in cls_list:
         cls_metrics = filter_cls_metrics(metrics, cls)
-        sum += calculate_AP(cls_metrics)
-    return sum / len(cls_list)
+        label = None
+        if plot_labels and cls in plot_labels:
+            label = plot_labels[cls]
+        sum_ap += calculate_AP(cls_metrics, label) * counts[cls]
+        sum_precision = average_metric(cls_metrics, 0) * counts[cls]
+        sum_recall = average_metric(cls_metrics, 1) * counts[cls]
+        sum_iou = average_metric(cls_metrics, 2) * counts[cls]
+
+    mAP = sum_ap / total_count
+    iou = sum_iou / total_count
+    precision = sum_precision / total_count
+    recall = sum_recall / total_count
+
+    if plot_labels:
+        plt.figtext(.14, .38, f'mAP: {mAP}')
+        plt.figtext(.14, .33, f'iou: {iou}')
+        plt.figtext(.14, .28, f'precision: {precision}')
+        plt.figtext(.14, .23, f'recall: {recall}')
+        plt.legend()
+        plt.show()
+
+    return mAP, iou, precision, recall
 
 
 # main_dir = 'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/'
 # ground_dir = main_dir + 'output/YOLO_darknet'
-# predict_dir = main_dir + 'predicts'
-# print(calculate_mAP(ground_dir, predict_dir, [0, 1]))
+# predict_dir = main_dir + 'predicts_left'
+
+# labels = {
+#     0: 'Столбы',
+#     1: 'Деревья',
+# }
+# mAP, iou, precision, recall = calculate_mAP(ground_dir, predict_dir, [0, 1], plot_labels=labels)
+# print('mAP', mAP)
+# print('iou', iou)
+# print('precision', precision)
+# print('recall', recall)

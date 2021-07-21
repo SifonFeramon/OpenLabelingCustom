@@ -58,6 +58,6 @@ def is_file_txt(path):
 
 def process_parallel(data, f):
     num_cores = mp.cpu_count()
-    results = Parallel(n_jobs=num_cores)(delayed(f)(d) for d in data)
+    results = Parallel(n_jobs=num_cores - 2)(delayed(f)(d) for d in data)
     return [res for res in results if res is not None]
 
