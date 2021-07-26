@@ -1,4 +1,7 @@
 from collections import defaultdict
+from threading import main_thread
+
+from numpy.core.fromnumeric import shape
 import utils as u
 import os
 import numpy as np
@@ -139,8 +142,6 @@ def calc_metrics(predictions, ground_truths):
         final[i][2] = div_zero_zero_as_one(stat[0], (stat[0] + stat[2]))
         final[i][3] = div_zero_zero_as_one(stat[3], stat[4])
         i += 1
-    
-
 
     return final
 
@@ -168,6 +169,8 @@ def read_config_matrix(path):
 def calc_file_metrics(ground_dir, predict_dir, filename):
     ground = read_config_matrix(os.path.join(ground_dir, filename))
     predict = read_config_matrix(os.path.join(predict_dir, filename))
+    if(len(ground) == 0):
+        return np.empty(dtype=float, shape=(0, 4)) 
     return calc_metrics(predict, ground)
 
 
@@ -260,6 +263,7 @@ def calculate_mAP(ground_dir, predict_dir, cls_list, plot_labels=None):
             total_count += c
 
     metrics = u.load_from_directory(predict_dir, load_f, u.is_file_txt)
+
     sum_ap, sum_iou, sum_precision, sum_recall = 0.0, 0.0, 0.0, 0.0
 
     for cls in cls_list:
@@ -288,16 +292,12 @@ def calculate_mAP(ground_dir, predict_dir, cls_list, plot_labels=None):
     return mAP, iou, precision, recall
 
 
-# main_dir = 'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/'
-# ground_dir = main_dir + 'output/YOLO_darknet'
-# predict_dir = main_dir + 'predicts_left'
+main_dir = 'C:/Users/smirn/Documents/RSM/diagrams/iter3/'
+ground_dir = main_dir + 'ground_train'
+predict_dir = main_dir + 'predict_train'
 
-# labels = {
-#     0: 'Столбы',
-#     1: 'Деревья',
-# }
-# mAP, iou, precision, recall = calculate_mAP(ground_dir, predict_dir, [0, 1], plot_labels=labels)
-# print('mAP', mAP)
-# print('iou', iou)
-# print('precision', precision)
-# print('recall', recall)
+labels = {
+    0: 'Столбы',
+    1: 'Деревья',
+}
+mAP, iou, precision, recall = calculate_mAP(ground_dir, predict_dir, [0, 1], plot_labels=labels)

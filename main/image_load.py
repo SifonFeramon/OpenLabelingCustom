@@ -29,7 +29,7 @@ def video_images_folder(video_path):
     # e.g.: `video.mp4`, `video.avi` -> `video_mp4/`, `video_avi/`
     file_extension = file_extension.replace('.', '_')
     file_path += file_extension
-    return video_path 
+    return file_path 
 
 
 # возвращает массив opencv изображений, полученных из видео. Кэширует их в папку на диск.
