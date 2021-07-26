@@ -4,3 +4,6 @@
 [submodule "tensorrt/yolo-tensorrt"]
 	path = tensorrt/yolo-tensorrt
 	url = https://github.com/enazoe/yolo-tensorrt.git
+[submodule "tensorrt/cxxopts"]
+	path = tensorrt/cxxopts
+	url = https://github.com/jarro2783/cxxopts.git
