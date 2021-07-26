@@ -8,3 +8,4 @@ main/input
 *.jpg
 *.txt
 *.json
+tensorrt/cmake-build-debug
