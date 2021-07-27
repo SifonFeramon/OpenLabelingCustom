@@ -1039,8 +1039,7 @@ if __name__ == '__main__':
         IMAGE_PATH_LIST.append(f)
 
     # кэшируем все добавленные видео
-    for f in u.list_folder(INPUT_DIR, u.is_file_video):
-        image_load.get_video_images(f)
+    u.process_parallel(u.list_folder(INPUT_DIR, u.is_file_video), image_load.cache_video_images)
 
     # индексируем все видео из подпапок
     for f in u.list_folder(INPUT_DIR, os.path.isdir):
