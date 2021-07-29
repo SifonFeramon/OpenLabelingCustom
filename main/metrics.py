@@ -181,22 +181,27 @@ def interpolated_precision(metrics):
         return []
 
     # сортируем метрики по полноте
-    metrics = metrics[metrics[:, 2].argsort()]
+    metrics = metrics[metrics[:, 1].argsort()]
     
     # [(percision, recall)]
     results = [[metrics[0][0], metrics[0][1]]]
 
     # Выделяются метрики, имеющие одинаковую полноту. Среди них находится максимальная точность.
+
+    cnt = 0
     for metric in metrics[1:]:
         precision = metric[0]
         recall = metric[1]
 
         if results[-1][1] != recall:
-            results.append([results[-1][0], results[-1][1]])
-            results[-1][1] = recall
-            results[-1][0] = precision
+            results[-1] = [results[-1][0] / (cnt + 1), results[-1][1]]
+            cnt = 0
+            results.append([precision, recall])
         else:
-            results[-1][0] = max(results[-1][0],  precision)
+            results[-1][0] += precision 
+            cnt += 1
+
+    results[-1] = [results[-1][0] / (cnt + 1), results[-1][1]]
 
     return np.array(results)
 
@@ -215,7 +220,7 @@ def calculate_AP(metrics, plot=None):
     if(len(interpolated) == 0):
         return 1.0
 
-    recall_segments = np.arange(0.0, 1.1, 0.001)
+    recall_segments = np.arange(0.0, 1.1, 0.1)
     precision_segments = []
     sum = 0.0
 
@@ -272,9 +277,9 @@ def calculate_mAP(ground_dir, predict_dir, cls_list, plot_labels=None):
         if plot_labels and cls in plot_labels:
             label = plot_labels[cls]
         sum_ap += calculate_AP(cls_metrics, label) * counts[cls]
-        sum_precision = average_metric(cls_metrics, 0) * counts[cls]
-        sum_recall = average_metric(cls_metrics, 1) * counts[cls]
-        sum_iou = average_metric(cls_metrics, 2) * counts[cls]
+        sum_precision += average_metric(cls_metrics, 0) * counts[cls]
+        sum_recall += average_metric(cls_metrics, 1) * counts[cls]
+        sum_iou += average_metric(cls_metrics, 2) * counts[cls]
 
     mAP = sum_ap / total_count
     iou = sum_iou / total_count
@@ -292,12 +297,12 @@ def calculate_mAP(ground_dir, predict_dir, cls_list, plot_labels=None):
     return mAP, iou, precision, recall
 
 
-main_dir = 'C:/Users/smirn/Documents/RSM/diagrams/iter3/'
-ground_dir = main_dir + 'ground_train'
-predict_dir = main_dir + 'predict_train'
+main_dir = 'C:/Users/smirn/Documents/RSM/diagrams/iter1/'
+ground_dir = main_dir + 'train_labels'
+predict_dir = main_dir + 'train_predicts'
 
 labels = {
     0: 'Столбы',
     1: 'Деревья',
 }
-mAP, iou, precision, recall = calculate_mAP(ground_dir, predict_dir, [0, 1], plot_labels=labels)
+mAP, iou, precision, recall = calculate_mAP(ground_dir, predict_dir, [1], plot_labels=labels)
