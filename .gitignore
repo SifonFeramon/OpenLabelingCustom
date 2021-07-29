@@ -5,5 +5,6 @@ main/input/people_walking_mp4
 main/output
 object_detection/models/*
 main/input
+main/input_all
 main/output
 tensorrt/cmake-build-debug

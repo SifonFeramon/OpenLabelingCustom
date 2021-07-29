@@ -1,10 +1,11 @@
 import os
 import shutil
+import glob
 
 
 def copy_each(src_dir, dst_dir, each):
     i = 0
-    for file in os.listdir(src_dir):
+    for file in glob.iglob(src_dir + '**/*.jpg', recursive=True):
         if file.endswith('.jpg'):
             if i % each == 0:
                 file = os.path.join(src_dir, file)
@@ -14,14 +15,16 @@ def copy_each(src_dir, dst_dir, each):
             i += 1
 
 
-def copy_from_different(src_dir1, src_dir2, ext1, ext2, dst_dir):
+def copy_from_different(src_dir1, src_dir2, ext1, ext2, dst_dir1, dst_dir2):
     for file in os.listdir(src_dir1):
         if file.endswith(ext1):
             file1 = os.path.join(src_dir1, file)
             file2 = os.path.join(src_dir2, file.split('.')[0] + ext2)
-            shutil.copy2(file1, dst_dir)
-            shutil.copy2(file2, dst_dir)
-
+            shutil.copy2(file1, dst_dir1)
+            if os.path.exists(file2):
+                shutil.copy2(file2, dst_dir2)
+            else:
+                open(file2, 'a').close()
 
 def check_valid(src_dir, f1='.jpg', f2='.txt'):
     for file in os.listdir(src_dir):
@@ -38,9 +41,13 @@ def copy_ext(src_dir, dst_dir, ext):
             file = os.path.join(src_dir, file)
             shutil.copy2(file, dst_dir)
 
-copy_each(
-   'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/vidos',
-   'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/input/vidos', 30)
+copy_from_different(
+   'c:/users/smirn/documents/rsm/openlabelingcustom/main/input/short_1/',
+   'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/output/YOLO_Darknet/',
+   '.jpg', '.txt',
+   'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/images/',
+   'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/labels/'
+   )
 # copy_from_different(
 #     'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/output/YOLO_Darknet',
 #     'C:/Users/smirn/Documents/RSM/OpenLabelingCustom/main/input/video_mp4',
